@@ -1,0 +1,56 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js add -D @iden3/eslint-config
+
+PATH: 
+  C:\Users\afegb\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\local\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\usr\bin;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\afegb\bin;C:\Python312\Scripts;C:\Python312;C:\Python311\Scripts;C:\Python311;C:\Users\afegb\AppData\Local\Programs\Python\Python37\Scripts;C:\Users\afegb\AppData\Local\Programs\Python\Python37;C:\Program Files\Python37\Scripts;C:\Program Files\Python37;C:\Program Files\Python39\Scripts;C:\Program Files\Python39;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0;C:\WINDOWS\System32\OpenSSH;C:\Program Files\Intel\WiFi\bin;C:\Program Files\Common Files\Intel\WirelessCommon;C:\Program Files (x86)\Intel\Intel(R) Management Engine Components\DAL;C:\Program Files\Intel\Intel(R) Management Engine Components\DAL;C:\ProgramData\chocolatey\bin;C:\Program Files\Amazon\AWSCLI\bin;C:\Program Files (x86)\PuTTY;C:\Program Files\Amazon\AWSCLIV2;C:\Program Files\Git\cmd;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Program Files\dotnet;C:\Program Files\Docker\Docker\resources\bin;C:\Program Files\Go\bin;C:\Program Files (x86)\Yarn\bin;C:\Program Files\nodejs;C:\Users\afegb\.cargo\bin;C:\Users\afegb\AppData\Local\Programs\Python\Python39\Scripts;C:\Users\afegb\AppData\Local\Programs\Python\Python39;C:\Users\afegb\AppData\Local\Microsoft\WindowsApps;C:\Users\afegb\AppData\Local\Programs\Microsoft VS Code\bin;C:\devops;C:\Users\afegb\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin;C:\Users\afegb\.ebcli-virtual-env\executables;C:\Program Files (x86)\Util\usr\local\wbin;C:\ProgramData\afegb\GitHubDesktop\bin;C:\users\afegb\.local\bin;C:\users\afegb\appdata\roaming\python\python39\scripts;C:\Users\afegb\.dotnet\tools;C:\Users\afegb\go\bin;C:\Users\afegb\AppData\Local\Yarn\bin;C:\Users\afegb\AppData\Roaming\npm;C:\Users\afegb\.deno\bin;C:\Program Files\Git\usr\bin\vendor_perl;C:\Program Files\Git\usr\bin\core_perl
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  20.10.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/@iden3%2feslint-config: Not found
+      at params.callback [as _callback] (C:\Program Files (x86)\Yarn\lib\cli.js:66145:18)
+      at self.callback (C:\Program Files (x86)\Yarn\lib\cli.js:140890:22)
+      at Request.emit (node:events:514:28)
+      at Request.<anonymous> (C:\Program Files (x86)\Yarn\lib\cli.js:141862:10)
+      at Request.emit (node:events:514:28)
+      at IncomingMessage.<anonymous> (C:\Program Files (x86)\Yarn\lib\cli.js:141784:12)
+      at Object.onceWrapper (node:events:628:28)
+      at IncomingMessage.emit (node:events:526:35)
+      at endReadableNT (node:internal/streams/readable:1589:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+
+npm manifest: 
+  {
+    "name": "hardhat-project",
+    "devDependencies": {
+      "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+      "@nomicfoundation/hardhat-ethers": "^3.0.5",
+      "@nomicfoundation/hardhat-network-helpers": "^1.0.9",
+      "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+      "@nomicfoundation/hardhat-verify": "^1.1.1",
+      "@typechain/ethers-v6": "^0.4.3",
+      "@typechain/hardhat": "^8.0.3",
+      "chai": "^4.3.10",
+      "ethers": "^6.8.1",
+      "hardhat": "^2.19.1",
+      "hardhat-gas-reporter": "^1.0.9",
+      "solidity-coverage": "^0.8.5",
+      "typechain": "^8.3.2"
+    },
+    "dependencies": {
+      "dotenv": "^16.3.1"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
