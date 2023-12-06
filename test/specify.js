@@ -1,126 +1,152 @@
-const {
-  time,
-  loadFixture,
-} = require("@nomicfoundation/hardhat-toolbox/network-helpers");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-describe("Lock", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
-  async function deployOneYearLockFixture() {
-    const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-    const ONE_GWEI = 1_000_000_000;
+describe("Election Contract", function () {
+  let Election;
+  let election;
+  let admin;
+  let voter;
+  let candidate;
 
-    const lockedAmount = ONE_GWEI;
-    const unlockTime = (await time.latest()) + ONE_YEAR_IN_SECS;
+  beforeEach(async function () {
+    [admin, voter, candidate] = await ethers.getSigners();
 
-    // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount] = await ethers.getSigners();
+    Election = await ethers.getContractFactory("Election");
+    election = await Election.deploy();
+    await election.deployed();
 
-    const Lock = await ethers.getContractFactory("Lock");
-    const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-    return { lock, unlockTime, lockedAmount, owner, otherAccount };
-  }
-
-  describe("Deployment", function () {
-    it("Should set the right unlockTime", async function () {
-      const { lock, unlockTime } = await loadFixture(deployOneYearLockFixture);
-
-      expect(await lock.unlockTime()).to.equal(unlockTime);
-    });
-
-    it("Should set the right owner", async function () {
-      const { lock, owner } = await loadFixture(deployOneYearLockFixture);
-
-      expect(await lock.owner()).to.equal(owner.address);
-    });
-
-    it("Should receive and store the funds to lock", async function () {
-      const { lock, lockedAmount } = await loadFixture(
-        deployOneYearLockFixture
-      );
-
-      expect(await ethers.provider.getBalance(lock.target)).to.equal(
-        lockedAmount
-      );
-    });
-
-    it("Should fail if the unlockTime is not in the future", async function () {
-      // We don't use the fixture here because we want a different deployment
-      const latestTime = await time.latest();
-      const Lock = await ethers.getContractFactory("Lock");
-      await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith(
-        "Unlock time should be in the future"
-      );
-    });
+    // Register admin and voter
+    await election.addElectoralOfficial(admin.address);
+    await election.registerVoter(voter.address);
   });
 
-  describe("Withdrawals", function () {
-    describe("Validations", function () {
-      it("Should revert with the right error if called too soon", async function () {
-        const { lock } = await loadFixture(deployOneYearLockFixture);
+  it("should register a voter", async function () {
+    await expect(election.registerVoter(candidate.address))
+      .to.emit(election, "VoterRegistered")
+      .withArgs(candidate.address);
 
-        await expect(lock.withdraw()).to.be.revertedWith(
-          "You can't withdraw yet"
-        );
-      });
-
-      it("Should revert with the right error if called from another account", async function () {
-        const { lock, unlockTime, otherAccount } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        // We can increase the time in Hardhat Network
-        await time.increaseTo(unlockTime);
-
-        // We use lock.connect() to send a transaction from another account
-        await expect(lock.connect(otherAccount).withdraw()).to.be.revertedWith(
-          "You aren't the owner"
-        );
-      });
-
-      it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-        const { lock, unlockTime } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        // Transactions are sent using the first signer by default
-        await time.increaseTo(unlockTime);
-
-        await expect(lock.withdraw()).not.to.be.reverted;
-      });
-    });
-
-    describe("Events", function () {
-      it("Should emit an event on withdrawals", async function () {
-        const { lock, unlockTime, lockedAmount } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        await time.increaseTo(unlockTime);
-
-        await expect(lock.withdraw())
-          .to.emit(lock, "Withdrawal")
-          .withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
-      });
-    });
-
-    describe("Transfers", function () {
-      it("Should transfer the funds to the owner", async function () {
-        const { lock, unlockTime, lockedAmount, owner } = await loadFixture(
-          deployOneYearLockFixture
-        );
-
-        await time.increaseTo(unlockTime);
-
-        await expect(lock.withdraw()).to.changeEtherBalances(
-          [owner, lock],
-          [lockedAmount, -lockedAmount]
-        );
-      });
-    });
+    const voterStatus = await election.verifyVoterRegistration(candidate.address);
+    expect(voterStatus).to.equal(1); // VoterStatus.Registered
   });
+
+  it("should register a candidate", async function () {
+    await expect(election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto"))
+      .to.emit(election, "CandidateRegistered")
+      .withArgs(candidate.address);
+
+    const candidateDetails = await election.getCandidateDetails(candidate.address);
+    expect(candidateDetails.name).to.equal("John Doe");
+    expect(candidateDetails.manifesto).to.equal("Manifesto");
+    expect(candidateDetails.voteCount).to.equal(0);
+  });
+
+  it("should allow a registered voter to vote", async function () {
+    // Register a candidate
+    await election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto");
+
+    // Vote for the candidate
+    await expect(election.connect(voter).vote(candidate.address))
+      .to.emit(election, "VoteCast")
+      .withArgs(voter.address, candidate.address);
+
+    const voterStatus = await election.verifyVoterRegistration(voter.address);
+    expect(voterStatus).to.equal(2); // VoterStatus.Voted
+  });
+
+  it("should display election results", async function () {
+    // Register candidates
+    await election.registerCandidate(candidate.address, "Candidate 1", 25, "Manifesto 1");
+    await election.registerCandidate(admin.address, "Candidate 2", 30, "Manifesto 2");
+
+    // Vote for candidates
+    await election.connect(voter).vote(candidate.address);
+    await election.connect(voter).vote(admin.address);
+
+    // Close the election
+    await election.closeElection();
+
+    // Display results
+    const results = await election.displayElectionResults();
+    expect(results).to.have.lengthOf(2);
+    expect(results[0]).to.equal(1); // Votes for Candidate 1
+    expect(results[1]).to.equal(1); // Votes for Candidate 2
+  });
+
+  it("should get the winner", async function () {
+    // Register candidates
+    await election.registerCandidate(candidate.address, "Candidate 1", 25, "Manifesto 1");
+    await election.registerCandidate(admin.address, "Candidate 2", 30, "Manifesto 2");
+
+    // Vote for candidates
+    await election.connect(voter).vote(candidate.address);
+    await election.connect(voter).vote(admin.address);
+
+    // Close the election
+    await election.closeElection();
+
+    // Get the winner
+    const [winner, voteCount] = await election.getWinner();
+    expect(winner).to.equal(admin.address);
+    expect(voteCount).to.equal(1); // Votes for Candidate 2
+  });
+
+  it("should not allow non-admin to register a voter", async function () {
+    await expect(election.connect(voter).addElectoralOfficial(admin.address)).to.be.revertedWith("Only admin can call this function");
+  });
+
+  it("should not allow non-admin to close the election", async function () {
+    await expect(election.connect(voter).closeElection()).to.be.revertedWith("Only admin can call this function");
+  });
+
+  it("should not allow a voter to vote before election is closed", async function () {
+    await expect(election.connect(voter).vote(candidate.address)).to.be.revertedWith("Invalid candidate");
+  });
+
+  it("should not allow a voter to vote twice", async function () {
+    // Register a candidate
+    await election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto");
+
+    // Vote for the candidate
+    await election.connect(voter).vote(candidate.address);
+
+    // Try voting again
+    await expect(election.connect(voter).vote(candidate.address)).to.be.revertedWith("Voter has already voted");
+  });
+
+  it("should not allow a non-registered voter to vote", async function () {
+    // Register a candidate
+    await election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto");
+
+    // Try voting
+    await expect(election.connect(candidate).vote(candidate.address)).to.be.revertedWith("Only registered voters can call this function");
+  });
+
+  it("should not allow a non-admin to register a candidate", async function () {
+    await expect(election.connect(voter).registerCandidate(candidate.address, "John Doe", 30, "Manifesto")).to.be.revertedWith("Only admin can call this function");
+  });
+
+  it("should not allow a voter to register another voter", async function () {
+    await expect(election.connect(voter).registerVoter(candidate.address)).to.be.revertedWith("Only admin can call this function");
+  });
+
+  it("should not allow a candidate to register another candidate", async function () {
+    await expect(election.connect(candidate).registerCandidate(admin.address, "John Doe", 30, "Manifesto")).to.be.revertedWith("Only admin can call this function");
+  });
+
+  it("should not allow a voter to register twice", async function () {
+    // Register the voter
+    await election.registerVoter(voter.address);
+
+    // Try registering again
+    await expect(election.registerVoter(voter.address)).to.be.revertedWith("Voter already registered");
+  });
+
+  it("should not allow a candidate to register twice", async function () {
+    // Register the candidate
+    await election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto");
+
+    // Try registering again
+    await expect(election.registerCandidate(candidate.address, "John Doe", 30, "Manifesto")).to.be.revertedWith("Candidate already registered");
+  });
+
 });
